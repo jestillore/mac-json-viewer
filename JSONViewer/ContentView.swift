@@ -1,6 +1,13 @@
 import SwiftUI
+import UniformTypeIdentifiers
+
+@Observable
+class AppState {
+    var isImporting = false
+}
 
 struct ContentView: View {
+    @Bindable var appState: AppState
     @State private var jsonText: String = "{\n  \"name\": \"JSON Viewer\",\n  \"version\": 1.0,\n  \"features\": [\"parse\", \"beautify\", \"minify\"],\n  \"nested\": {\n    \"enabled\": true,\n    \"count\": 42\n  }\n}"
     @State private var parsedValue: JSONValue?
     @State private var errorMessage: String?
@@ -15,6 +22,24 @@ struct ContentView: View {
         }
         .frame(minWidth: 700, minHeight: 400)
         .onAppear { parseJSON() }
+        .fileImporter(
+            isPresented: $appState.isImporting,
+            allowedContentTypes: [.json, UTType(filenameExtension: "geojson") ?? .json],
+            allowsMultipleSelection: false
+        ) { result in
+            switch result {
+            case .success(let urls):
+                guard let url = urls.first else { return }
+                let didAccess = url.startAccessingSecurityScopedResource()
+                defer { if didAccess { url.stopAccessingSecurityScopedResource() } }
+                if let data = try? Data(contentsOf: url),
+                   let text = String(data: data, encoding: .utf8) {
+                    jsonText = text
+                }
+            case .failure(let error):
+                errorMessage = error.localizedDescription
+            }
+        }
     }
 
     private var leftPanel: some View {
