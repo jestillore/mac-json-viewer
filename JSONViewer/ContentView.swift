@@ -63,7 +63,10 @@ struct ContentView: View {
             TextEditor(text: $jsonText)
                 .font(.system(.body, design: .monospaced))
                 .scrollContentBackground(.visible)
-                .onChange(of: jsonText) { parseJSON() }
+                .onChange(of: jsonText) { oldValue, newValue in
+                    loadDroppedFileIfNeeded(oldText: oldValue, newText: newValue)
+                    parseJSON()
+                }
         }
         .background(Color(nsColor: .textBackgroundColor))
     }
@@ -98,6 +101,23 @@ struct ContentView: View {
             }
         }
         .background(Color(nsColor: .textBackgroundColor))
+    }
+
+    private func loadDroppedFileIfNeeded(oldText: String, newText: String) {
+        guard newText.count > oldText.count else { return }
+        // Find the inserted portion by matching common prefix and suffix
+        let commonPrefix = newText.commonPrefix(with: oldText)
+        let oldSuffix = String(oldText.dropFirst(commonPrefix.count))
+        let newSuffix = String(newText.dropFirst(commonPrefix.count))
+        guard newSuffix.hasSuffix(oldSuffix) else { return }
+        let path = String(newSuffix.dropLast(oldSuffix.count)).trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !path.isEmpty,
+              path.hasPrefix("/"),
+              path.hasSuffix(".json") || path.hasSuffix(".geojson"),
+              FileManager.default.fileExists(atPath: path),
+              let data = try? Data(contentsOf: URL(fileURLWithPath: path)),
+              let text = String(data: data, encoding: .utf8) else { return }
+        jsonText = text
     }
 
     private func parseJSON() {
