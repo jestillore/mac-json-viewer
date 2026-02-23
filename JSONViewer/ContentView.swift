@@ -60,9 +60,7 @@ struct ContentView: View {
 
             Divider()
 
-            TextEditor(text: $jsonText)
-                .font(.system(.body, design: .monospaced))
-                .scrollContentBackground(.visible)
+            HighlightedTextEditor(text: $jsonText)
                 .onChange(of: jsonText) { oldValue, newValue in
                     loadDroppedFileIfNeeded(oldText: oldValue, newText: newValue)
                     parseJSON()
